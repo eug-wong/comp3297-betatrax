@@ -1,0 +1,15 @@
+[project]
+name = "comp3297-betatrax"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Eugene Wong", email = "ewong298@gmail.com"},
+]
+dependencies = ["Django=6.0.3"]
+requires-python = ">=3.13"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
