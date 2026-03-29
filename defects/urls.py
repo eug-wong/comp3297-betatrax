@@ -12,4 +12,5 @@ urlpatterns = [
     path('api/developer/defects/<int:defect_id>/take-responsibility/', views.take_responsibility, name='take_responsibility'),
     path('api/developer/defects/<int:defect_id>/mark-as-fixed/', views.mark_as_fixed, name='mark_as_fixed'),
     path('api/developer/defects/<int:defect_id>/mark-as-cannot-reproduce/', views.mark_as_cannot_reproduce, name='mark_as_cannot_reproduce'),
+    path('api/defects/<int:pk>/resolve/', views.resolve_defect, name='resolve-defect'),
 ]
