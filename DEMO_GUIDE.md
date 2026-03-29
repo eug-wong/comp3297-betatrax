@@ -39,23 +39,21 @@ POST this JSON:
 
 ### Step 2: PO - List New defects
 **Login as:** `productowner`
-**URL:** http://localhost:8000/api/po/defects/new/?product_id=1
+**URL:** http://localhost:8000/api/po/defects/new/
 
 ---
 
 ### Step 3: PO - View target defect details
-**URL:** http://localhost:8000/api/po/defect/detail/?report_id=3&product_id=1
+**URL:** http://localhost:8000/api/po/defects/3/
 
 ---
 
 ### Step 4: PO - Accept defect
-**URL:** http://localhost:8000/api/po/defect/approve/
+**URL:** http://localhost:8000/api/po/defects/3/approve/
 
 POST this JSON:
 ```json
 {
-    "report_id": 3,
-    "product_id": 1,
     "severity": "Minor",
     "priority": "High",
     "backlog_item_id": "PBI-003"

@@ -6,23 +6,26 @@ from .models import DefectReport, Product
 class ProductOwnerService:
     def __init__(self, po_user):
         self.po_user = po_user
+        try:
+            self.product = Product.objects.get(owner=po_user)
+        except Product.DoesNotExist:
+            self.product = None
 
     # 1. Get the New defect list of products responsible for PO
-    def get_new_defect_list(self, product_id):
-        try:
-            product = Product.objects.get(id=product_id, owner=self.po_user)
-            return DefectReport.objects.filter(
-                product=product,
-                status='New'
-            ).order_by('-created_at')
-        except Product.DoesNotExist:
+    def get_new_defect_list(self):
+        if not self.product:
             return []
+        return DefectReport.objects.filter(
+            product=self.product,
+            status='New'
+        ).order_by('-created_at')
 
     # 2. Obtain detailed information of a single defect
-    def get_defect_detail(self, report_id, product_id):
+    def get_defect_detail(self, report_id):
+        if not self.product:
+            return None
         try:
-            product = Product.objects.get(id=product_id, owner=self.po_user)
-            return DefectReport.objects.get(id=report_id, product=product)
+            return DefectReport.objects.get(id=report_id, product=self.product)
         except DefectReport.DoesNotExist:
             return None
 
@@ -30,17 +33,18 @@ class ProductOwnerService:
     def accept_and_approve_defect(
         self,
         report_id,
-        product_id,
         severity,
         priority,
         backlog_item_id
     ):
+        if not self.product:
+            return {"success": False, "message": "User is not a Product Owner"}
+
         # Verify products and permissions
         try:
-            product = Product.objects.get(id=product_id, owner=self.po_user)
             defect = DefectReport.objects.get(
                 id=report_id,
-                product=product,
+                product=self.product,
                 status='New'
             )
         except DefectReport.DoesNotExist:
