@@ -31,4 +31,3 @@ python manage.py runserver
 - [ ] PO mark defect as Duplicate
 - [ ] Reopen defect flow
 - [ ] Comments on defects
-

@@ -1,0 +1,144 @@
+COMP3297 Software Engineering
+SCHOOL OF COMPUTING AND DATA SCIENCE
+DEPARTMENT OF COMPUTER SCIENCE
+
+GROUP PROJECT DESCRIPTION: BetaTrax
+Background:
+Your company is the developer of several software products. It follows the Software as a Service (SaaS)
+model to deliver those applications to its customers; each product is cloud-hosted and accessed by customers
+via the internet. The company uses a scheduled release strategy. For each of its products, this includes a beta
+testing program as a component of quality assurance. Managing the defects reported by beta testers is the
+focus of your project.
+Beta testing involves giving users access to pre-release versions of a product or product update. Users then
+work with those versions in their real-world environment and provide feedback to developers in the form of
+defect reports. Developers make improvements based on cycles of pre-release, testing and feedback before
+deploying the software into general production. You can find a short description of a similar real-world
+program here (Capture One is a professional photo editing software suite):
+https://support.captureone.com/hc/en-us/articles/27689044261661-Capture-One-Beta-Program
+Your company’s cycles of development and beta testing leading to a new scheduled commercial release of a
+product are as follows:
+•
+•
+•
+•
+•
+
+•
+
+over a series of sprints, new features, feature enhancements and fixes are built onto the previous
+general release of the product.
+when major new work is sufficiently complete and is stable, the Product Owner schedules the
+release of a beta version and specifies its expiry date. The beta version is available for testing from
+its release through to expiry.
+the company invites all registered users of the current commercial release to register as testers of
+this beta version. Testers are given a unique Tester ID.
+during the period the beta version is available, whenever registered beta testers launch the product,
+they are given the option of working with the beta version or working with the current commercial
+release.
+when a beta tester submits a defect report, the company passes it to the relevant Product Owner for
+evaluation. If accepted, the Product Owner adds it to the Product Backlog for resolution. If the tester
+indicated they wished to be informed of progress, the Product Owner sends periodic updates of the
+defect’s status.
+critical defects are fixed immediately and may result in a beta version being replaced before its
+planned expiration. Otherwise, expiry is usually followed by one or more sprints to clear non-trivial
+defects and make further improvements leading to release of a new beta or commercial version.
+
+As the number of beta testers has grown, the manual handling of defect reports is becoming infeasible. In
+addition, it is no longer possible to keep an adequate history of defect resolution and decisions made during
+that process. The company has invited your team to develop the BetaTrax service, a SaaS application to
+support its beta testing programme by managing the beta defect resolution workflow and tracking reported
+defects through their lifecycle. It will be used for all the company’s products and, in the future, may be
+rolled out as a product itself, for adoption by other software development companies.
+
+BetaTrax
+The company has many products at various stages of development. Each product has a single Product Owner
+and a team of Developers. Product Owners and Developers are all company employees. Products are
+registered with BetaTrax, together with their owner and developers. Owners and developers are responsible
+for, at most, one product in BetaTrax at any time.
+To support the automation offered by BetaTrax, beta versions of products now have an additional labelled
+section of their UI through which testers can submit defect reports. Reports contain: the Product ID and
+version, a short descriptive report title, a longer description of the defect, details of the steps needed to
+reproduce the fault, and the Tester ID. Testers also have the option of including an email address if they
+wish to be informed of progress made in resolving the defect.
+When a defect report is received by BetaTrax, the date and time are added, its status is initialised as “New”,
+and the report is added to the collection of reports for the product. The status is updated as the report passes
+through its lifecycle, as follows:
+
+Fig. 1: Reported defect lifecycle
+
+-
+
+each “New” report is evaluated by the Product Owner. If the defect is accepted, the Product Owner
+assesses and records its Severity [Critical, Major, Minor, Low] and Priority [Critical, High, Medium,
+Low] and creates an item in the Product Backlog referencing the report. The report status changes to
+“Open”.
+o if the Product Owner does not consider that the report identifies a true defect, then its status
+changes to “Rejected”.
+o if the Product Owner recognises the defect as being a duplicate of a defect already opened,
+then its status changes to “Duplicate” and it is linked to a report it duplicates. [Defect B is
+defined as a duplicate of Defect A if Defect B will be fixed as a consequence of fixing
+Defect A.]
+
+-
+
+when the related item is taken from the Backlog into the next Sprint and a Developer accepts
+responsibility for resolving it, then its status changes to “Assigned” and it is linked to that
+Developer.
+o If the Developer is unable to reproduce the defect, the status changes to “Cannot reproduce”.
+
+-
+
+when the Developer feels the defect has been corrected, the status is changed to “Fixed” and the fix
+is retested along with other changes contributing to the new increment.
+o if testing reveals that the defect has not been corrected successfully, its status changes to
+“Reopened” and it is returned to the Product Backlog.
+o if testing is successful, the defect’s status changes to “Resolved”.
+
+If the tester provided an email address for notifications, then whenever the status of the defect report
+changes, mail is sent to the tester to inform of the change. If the defect was linked as a duplicate, then when
+the status of the ultimate parent changes, testers associated with each dependent and who provided an
+address will be notified of the change.
+At any point in its lifecycle, the Product Owner or Developer may attach Comments to a report to add detail
+and to provide a record of decisions made during the defect’s resolution. Each Comment contains comment
+text, the date it was attached to the report, and identifies the author.
+[Note: To make it feasible to complete the work as a short course project, many aspects of the service and
+the data it manages has been reduced and simplified. Don’t be distracted by that – your task is to develop the
+simplified product as described.]
+General assumptions and other information
+You may assume that:
+•
+
+the scope of the project is narrow. There is no requirement to manage the Product Backlog, support
+Tester registration, etc.
+
+•
+
+when a user updates data, there is no need to reflect that change immediately to other users who, for
+example, may be viewing the data;
+
+•
+
+you will not be required to implement a BetaTrax front-end; your role is to develop the back-end only.
+We’ve found that many students find it too demanding to deliver functioning UIs on top of mastering
+Django and REST API development.
+
+•
+
+a Product Owner’s decisions are correct concerning acceptance, rejection and duplication. They do
+not need to be revisited after a defect report is “Open”.
+
+•
+
+you can expect changes and extensions to requirements over the course of development, particularly
+after delivery of Release 1.
+
+Technical issues
+•
+•
+•
+
+BetaTrax will be implemented in Python on Django 6.x.x (any release);
+There is no constraint on choice of OS;
+You will develop locally, running on the Django default development server.
+
+

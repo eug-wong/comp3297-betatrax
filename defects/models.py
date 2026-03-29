@@ -116,6 +116,17 @@ class DefectReport(models.Model):
         related_name='duplicates'
     )
 
+    # PO approval fields
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_defects'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    backlog_item_link = models.CharField(max_length=100, blank=True, null=True)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)  # time_received
     updated_at = models.DateTimeField(auto_now=True)

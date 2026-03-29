@@ -25,13 +25,14 @@ SECRET_KEY = 'django-insecure-n)ti$svy6%0mlw&i#^o_@(wn52$bil+sct00brj^&4yu_ov#8n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'defects.apps.DefectsConfig',
+    'rest_framework',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,6 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
+
+# Email backend - prints to console for development
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -116,6 +120,3 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
-# Email backend - prints to console for development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
