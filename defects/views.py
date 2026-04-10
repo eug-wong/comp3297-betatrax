@@ -2,98 +2,122 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.core.mail import send_mail
-from django.shortcuts import render, get_object_or_404
-import json
+from django.shortcuts import get_object_or_404
 
 from .models import DefectReport, Developer, Product
-from .serializers import DefectReportSerializer, ResolveDefectSerializer
+from .serializers import DefectReportSerializer
+from .services import ProductOwnerService
 
 
-@api_view(['POST'])
-def submit_defect(request):
+@api_view(['GET', 'POST'])
+def defect_list(request):
     """
-    Submit a new defect report.
-
-    POST /api/defects/
-
-    The defect is created with status='New'.
-    If tester provided an email, we notify the Product Owner.
+    POST /api/defects/   Submit a new defect report (no authentication required).
+    GET  /api/defects/   List defects for the authenticated user's product.
+                         Optional ?status= query param to filter by status.
     """
-    serializer = DefectReportSerializer(data=request.data)
+    if request.method == 'POST':
+        serializer = DefectReportSerializer(data=request.data)
+        if serializer.is_valid():
+            defect = serializer.save()
+            return Response(
+                DefectReportSerializer(defect).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    if serializer.is_valid():
-        defect = serializer.save()
+    # GET — requires authentication
+    if not request.user.is_authenticated:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # product_owner_email = defect.product.owner.email
-        # if product_owner_email:
-        #     send_mail(
-        #         subject=f'[BetaTrax] New defect submitted: {defect.title}',
-        #         message=f'A new defect has been submitted.\n\n'
-        #                 f'Title: {defect.title}\n'
-        #                 f'Tester ID: {defect.tester_id}\n'
-        #                 f'Description: {defect.description}\n',
-        #         from_email='betatrax@example.com',
-        #         recipient_list=[product_owner_email],
-        #     )
+    status_filter = request.query_params.get('status')
 
-        return Response(
-            DefectReportSerializer(defect).data,
-            status=status.HTTP_201_CREATED
-        )
+    # Try as developer
+    try:
+        developer = Developer.objects.get(user=request.user)
+        defects = DefectReport.objects.filter(product=developer.product)
+        if status_filter:
+            defects = defects.filter(status=status_filter)
+        defects = defects.values('id', 'title', 'description', 'severity', 'priority', 'created_at')
+        return Response({
+            'product': developer.product.name,
+            'defects': list(defects),
+            'count': defects.count()
+        })
+    except Developer.DoesNotExist:
+        pass
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # Try as Product Owner
+    po_service = ProductOwnerService(request.user)
+    if not po_service.product:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+    defects = po_service.get_defect_list()
+    if status_filter:
+        defects = defects.filter(status=status_filter)
+    data = [{
+        'report_id': d.id,
+        'title': d.title,
+        'tester_id': d.tester_id,
+        'submitted_at': d.created_at,
+        'status': d.status
+    } for d in defects]
+    return Response(data)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def list_defects(request):
+def defect_detail(request, defect_id):
+    """
+    GET /api/defects/<defect_id>/   View full details of a defect report.
+    Works for both developers and Product Owners; response shape differs by role.
+    """
+    # Try as developer
     try:
-        # Get the developer associated with the logged-in user
         developer = Developer.objects.get(user=request.user)
+        defect = get_object_or_404(DefectReport, id=defect_id)
+        if defect.product != developer.product:
+            return Response(
+                {'error': 'You do not have access to this defect'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return Response({
+            'id': defect.id,
+            'title': defect.title,
+            'description': defect.description,
+            'steps_to_reproduce': defect.steps_to_reproduce,
+            'product': defect.product.name,
+            'tester_id': defect.tester_id,
+            'tester_email': defect.tester_email,
+            'status': defect.status,
+            'severity': defect.severity,
+            'priority': defect.priority,
+            'assigned_developer': defect.assigned_developer.user.username if defect.assigned_developer else None,
+            'created_at': defect.created_at.isoformat(),
+            'updated_at': defect.updated_at.isoformat()
+        })
     except Developer.DoesNotExist:
-        return Response(
-            {'error': 'User is not a registered developer'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+        pass
 
-    # Get all open defects for the developer's product
-    defects = DefectReport.objects.filter(
-        product=developer.product,
-    ).values('id', 'title', 'description', 'severity', 'priority', 'created_at')
+    # Try as Product Owner
+    po_service = ProductOwnerService(request.user)
+    if not po_service.product:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+    defect = po_service.get_defect_detail(defect_id)
+    if not defect:
+        return Response({'error': 'Defect not found'}, status=status.HTTP_404_NOT_FOUND)
 
     return Response({
-        'product': developer.product.name,
-        'defects': list(defects),
-        'count': defects.count()
-    })
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def list_open_defects(request):
-    """
-    List all open defects (status='Open') available for the developer to take responsibility for.
-    The developer must be associated with a product.
-    """
-    try:
-        # Get the developer associated with the logged-in user
-        developer = Developer.objects.get(user=request.user)
-    except Developer.DoesNotExist:
-        return Response(
-            {'error': 'User is not a registered developer'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-
-    # Get all open defects for the developer's product
-    open_defects = DefectReport.objects.filter(
-        product=developer.product,
-        status='Open'
-    ).values('id', 'title', 'description', 'severity', 'priority', 'created_at')
-
-    return Response({
-        'product': developer.product.name,
-        'open_defects': list(open_defects),
-        'count': open_defects.count()
+        'report_id': defect.id,
+        'product': defect.product.name,
+        'title': defect.title,
+        'description': defect.description,
+        'reproduction_steps': defect.steps_to_reproduce,
+        'tester_id': defect.tester_id,
+        'tester_email': defect.tester_email,
+        'status': defect.status,
+        'submitted_at': defect.created_at
     })
 
 
@@ -112,24 +136,20 @@ def take_responsibility(request, defect_id):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    # Get the defect report
     defect = get_object_or_404(DefectReport, id=defect_id)
 
-    # Verify the defect belongs to the developer's product
     if defect.product != developer.product:
         return Response(
             {'error': 'Defect does not belong to your product'},
             status=status.HTTP_403_FORBIDDEN
         )
 
-    # Verify the defect status is 'Open'
     if defect.status != 'Open':
         return Response(
             {'error': f'Defect status must be Open, currently {defect.status}'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Update the defect status and assign to developer
     defect.status = 'Assigned'
     defect.assigned_developer = developer
     defect.save()
@@ -143,47 +163,6 @@ def take_responsibility(request, defect_id):
             'status': defect.status,
             'assigned_to': developer.user.username
         }
-    })
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def view_defect_detail(request, defect_id):
-    """
-    View details of a specific defect report.
-    Developer can view any defect in their product; other users can only view if assigned to them.
-    """
-    try:
-        developer = Developer.objects.get(user=request.user)
-    except Developer.DoesNotExist:
-        return Response(
-            {'error': 'You are not a registered developer'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-
-    defect = get_object_or_404(DefectReport, id=defect_id)
-
-    # Verify access: developer can view defects from their product
-    if defect.product != developer.product:
-        return Response(
-            {'error': 'You do not have access to this defect'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-
-    return Response({
-        'id': defect.id,
-        'title': defect.title,
-        'description': defect.description,
-        'steps_to_reproduce': defect.steps_to_reproduce,
-        'product': defect.product.name,
-        'tester_id': defect.tester_id,
-        'tester_email': defect.tester_email,
-        'status': defect.status,
-        'severity': defect.severity,
-        'priority': defect.priority,
-        'assigned_developer': defect.assigned_developer.user.username if defect.assigned_developer else None,
-        'created_at': defect.created_at.isoformat(),
-        'updated_at': defect.updated_at.isoformat()
     })
 
 
@@ -204,21 +183,18 @@ def mark_as_fixed(request, defect_id):
 
     defect = get_object_or_404(DefectReport, id=defect_id)
 
-    # Verify the defect is assigned to this developer
     if defect.assigned_developer != developer:
         return Response(
             {'error': 'Defect is not assigned to you'},
             status=status.HTTP_403_FORBIDDEN
         )
 
-    # Verify the defect status is 'Assigned'
     if defect.status != 'Assigned':
         return Response(
             {'error': f'Defect status must be Assigned, currently {defect.status}'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Update the defect status to 'Fixed'
     defect.status = 'Fixed'
     defect.save()
 
@@ -250,21 +226,18 @@ def mark_as_cannot_reproduce(request, defect_id):
 
     defect = get_object_or_404(DefectReport, id=defect_id)
 
-    # Verify the defect is assigned to this developer
     if defect.assigned_developer != developer:
         return Response(
             {'error': 'Defect is not assigned to you'},
             status=status.HTTP_403_FORBIDDEN
         )
 
-    # Verify the defect status is 'Assigned'
     if defect.status != 'Assigned':
         return Response(
             {'error': f'Defect status must be Assigned, currently {defect.status}'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Update the defect status to 'Cannot Reproduce'
     defect.status = 'Cannot Reproduce'
     defect.save()
 
@@ -277,24 +250,3 @@ def mark_as_cannot_reproduce(request, defect_id):
             'status': defect.status
         }
     })
-
-
-@api_view(['PATCH'])
-def resolve_defect(request, pk):
-    try:
-        defect = DefectReport.objects.get(pk=pk)
-    except DefectReport.DoesNotExist:
-        return Response({"error": "Defect not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    # p0
-    serializer = ResolveDefectSerializer(defect, data=request.data, partial=True)
-
-    if serializer.is_valid():
-        # target resolved only when fixed
-        if defect.status != 'Fixed' and request.data.get('status') == 'Resolved':
-             return Response({"error": "Only Fixed defects can be resolved."}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer.save()
-        return Response({"message": f"Defect {pk} marked as Resolved."})
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
