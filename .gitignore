@@ -7,3 +7,5 @@ __pycache__/
 demo_setup.py
 DEMO_GUIDE.md
 db.sqlite3
+*.md
+!README.md
