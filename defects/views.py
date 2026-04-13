@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import DefectReport, Employee
-from .serializers import DefectReportSerializer
+from .models import DefectReport, Employee, Comment, Product
+from .serializers import DefectReportSerializer, CommentSerializer, ProductSerializer
 
 
 def _get_employee(request, role=None):
@@ -185,6 +185,7 @@ def take_responsibility(request, defect_id):
     defect.status = 'Assigned'
     defect.assigned_developer = employee
     defect.save()
+    send_status_change_notifications(defect, 'Open', 'Assigned')
 
     return Response({
         'success': True,
@@ -582,3 +583,52 @@ def po_defect_detail(request, defect_id):
         'cannot_reproduce_reason': defect.cannot_reproduce_reason,
         'submitted_at': defect.created_at
     })
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def defect_comments(request, defect_id):
+    employee, error_response = _get_employee(request)
+    if error_response:
+        return error_response
+
+    # Verify the defect exists and belongs to the user's product
+    defect = get_object_or_404(DefectReport, id=defect_id, product=employee.product)
+
+    if request.method == 'GET':
+        comments = Comment.objects.filter(defect=defect).order_by('created_at')
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            # Auto-set the defect and the author (the currently logged-in user)
+            serializer.save(defect=defect, author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_product(request):
+# Enforce that only a ProductOwner can create a product
+    po, error_response = _get_employee(request, role='ProductOwner')
+    if error_response:
+        return error_response    
+    # Note: Depending on your exact Employee model logic, you may want to enforce
+    # role='ProductOwner' here. However, standard DRF creation looks like this:
+    serializer = ProductSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    """Task 6: Logout endpoint"""
+    if hasattr(request.user, 'auth_token'):
+        request.user.auth_token.delete()
+    return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)

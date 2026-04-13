@@ -36,4 +36,8 @@ urlpatterns = [
     path('api/po/defects/<int:defect_id>/mark-duplicate/', views.mark_duplicate, name='po_mark_duplicate'),
     path('api/po/defects/<int:defect_id>/reopen/', views.reopen_defect, name='po_reopen_defect'),
     path('api/po/defects/<int:pk>/resolve/', views.resolve_defect, name='po_resolve_defect'),
+
+    path('api/defects/<int:defect_id>/comments/', views.defect_comments, name='defect_comments'),
+    path('api/products/', views.create_product, name='create_product'),
+    path('api/auth/logout/', views.logout_view, name='api_logout'),    
 ]
