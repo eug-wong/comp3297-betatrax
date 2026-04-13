@@ -34,4 +34,4 @@ python manage.py runserver
 ## Not Implemented
 - [ ] Defect report validation
 - [ ] Version field on defect report
-- [ ] User Authentication
+- [ ] PO Assign Defect to Developer
