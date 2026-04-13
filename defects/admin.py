@@ -1,16 +1,19 @@
 from django.contrib import admin
-from .models import Product, Developer, DefectReport, Comment
+from .models import Product, Employee, DefectReport, Comment
+
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'owner')
-    search_fields = ('name', 'owner__username')
+    list_display = ('name',)
+    search_fields = ('name',)
 
-@admin.register(Developer)
-class DeveloperAdmin(admin.ModelAdmin):
-    list_display = ('user', 'product')
-    list_filter = ('product',)
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'product')
+    list_filter = ('role', 'product')
     search_fields = ('user__username', 'product__name')
+
 
 @admin.register(DefectReport)
 class DefectReportAdmin(admin.ModelAdmin):
@@ -36,6 +39,7 @@ class DefectReportAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):

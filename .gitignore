@@ -5,5 +5,8 @@ __pycache__/
 .ruff_cache/
 .pdm-python
 demo_setup.py
+defects/tests.py
 DEMO_GUIDE.md
 db.sqlite3
+*.md
+!README.md
