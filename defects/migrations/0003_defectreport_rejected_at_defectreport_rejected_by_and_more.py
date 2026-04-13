@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('defects', '0002_defectreport_approved_at_defectreport_approved_by_and_more'),
+        ('defects', '0003_remove_product_owner_employee_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -35,11 +35,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='defectreport',
-            name='id',
-            field=models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID'),
-        ),
-        migrations.AlterField(
-            model_name='developer',
             name='id',
             field=models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID'),
         ),
