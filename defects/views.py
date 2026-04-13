@@ -12,8 +12,8 @@ from .serializers import DefectReportSerializer, CommentSerializer, ProductSeria
 
 def _get_employee(request, role=None):
     if not request.user.is_authenticated:
-      return None, Response({'error': 'Authentication required'}, status=401)
-    
+        return None, Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
     try:
         employee = Employee.objects.select_related('user', 'product').get(user=request.user)
     except Employee.DoesNotExist:
@@ -127,6 +127,10 @@ def defect_list(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def defect_detail(request, defect_id):
+    return _defect_detail_response(request, defect_id)
+
+
+def _defect_detail_response(request, defect_id):
     employee, error_response = _get_employee(request)
     if error_response:
         return error_response
@@ -183,7 +187,7 @@ def take_responsibility(request, defect_id):
         return Response({'error': 'Defect does not belong to your product'}, status=status.HTTP_403_FORBIDDEN)
 
     if defect.status not in ['Open', 'Reopened']:
-        return Response({'error': f'Defect status must be Open, currently {defect.status}'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': f'Defect status must be Open or Reopened, currently {defect.status}'}, status=status.HTTP_400_BAD_REQUEST)
 
     defect.status = 'Assigned'
     defect.assigned_developer = employee
@@ -517,7 +521,7 @@ def list_defects(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def view_defect_detail(request, defect_id):
-    return defect_detail(request, defect_id)
+    return _defect_detail_response(request, defect_id)
 
 
 @api_view(['GET'])
