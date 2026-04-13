@@ -40,4 +40,4 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = '__all__'
         # Ensure the user cannot manually override these via the API body
-        read_only_fields = ['id', 'defect', 'author', 'created_at']
+        read_only_fields = ['id', 'defect_report', 'author', 'created_at']

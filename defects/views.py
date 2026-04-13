@@ -11,6 +11,9 @@ from .serializers import DefectReportSerializer, CommentSerializer, ProductSeria
 
 
 def _get_employee(request, role=None):
+    if not request.user.is_authenticated:
+      return None, Response({'error': 'Authentication required'}, status=401)
+    
     try:
         employee = Employee.objects.select_related('user', 'product').get(user=request.user)
     except Employee.DoesNotExist:
@@ -179,7 +182,7 @@ def take_responsibility(request, defect_id):
     if defect.product != employee.product:
         return Response({'error': 'Defect does not belong to your product'}, status=status.HTTP_403_FORBIDDEN)
 
-    if defect.status != 'Open':
+    if defect.status not in ['Open', 'Reopened']:
         return Response({'error': f'Defect status must be Open, currently {defect.status}'}, status=status.HTTP_400_BAD_REQUEST)
 
     defect.status = 'Assigned'
@@ -596,7 +599,7 @@ def defect_comments(request, defect_id):
     defect = get_object_or_404(DefectReport, id=defect_id, product=employee.product)
 
     if request.method == 'GET':
-        comments = Comment.objects.filter(defect=defect).order_by('created_at')
+        comments = Comment.objects.filter(defect_report=defect).order_by('date')
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
 
@@ -604,7 +607,7 @@ def defect_comments(request, defect_id):
         serializer = CommentSerializer(data=request.data)
         if serializer.is_valid():
             # Auto-set the defect and the author (the currently logged-in user)
-            serializer.save(defect=defect, author=request.user)
+            serializer.save(defect_report=defect, author=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
