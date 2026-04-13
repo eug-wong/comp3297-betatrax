@@ -4,10 +4,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.shortcuts import render, get_object_or_404
+from django.utils import timezone
 import json
 
 from .models import DefectReport, Developer, Product
 from .serializers import DefectReportSerializer, ResolveDefectSerializer
+from .services import send_status_change_notifications
 
 
 @api_view(['POST'])
@@ -257,6 +259,13 @@ def mark_as_cannot_reproduce(request, defect_id):
             status=status.HTTP_403_FORBIDDEN
         )
 
+    reason = request.data.get('cannot_reproduce_reason')
+    if not reason or not str(reason).strip():
+        return Response(
+            {'error': 'cannot_reproduce_reason is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     # Verify the defect status is 'Assigned'
     if defect.status != 'Assigned':
         return Response(
@@ -266,7 +275,31 @@ def mark_as_cannot_reproduce(request, defect_id):
 
     # Update the defect status to 'Cannot Reproduce'
     defect.status = 'Cannot Reproduce'
+    defect.cannot_reproduce_reason = str(reason).strip()
+    defect.cannot_reproduced_by = developer
+    defect.cannot_reproduced_at = timezone.now()
     defect.save()
+
+    send_status_change_notifications(defect, 'Assigned', 'Cannot Reproduce')
+
+    po_email = defect.product.owner.email
+    if po_email:
+        try:
+            send_mail(
+                subject=f'BetaTrax: Defect {defect.id} Marked Cannot Reproduce',
+                message=(
+                    f'Defect Report ID: {defect.id}\n'
+                    f'Title: {defect.title}\n'
+                    f'New Status: Cannot Reproduce\n'
+                    f'Developer ID: {developer.id}\n'
+                    f'Reason: {defect.cannot_reproduce_reason}\n'
+                ),
+                from_email='system@betatrax.com',
+                recipient_list=[po_email],
+                fail_silently=False,
+            )
+        except Exception:
+            pass
 
     return Response({
         'success': True,
@@ -274,7 +307,10 @@ def mark_as_cannot_reproduce(request, defect_id):
         'defect': {
             'id': defect.id,
             'title': defect.title,
-            'status': defect.status
+            'status': defect.status,
+            'cannot_reproduce_reason': defect.cannot_reproduce_reason,
+            'cannot_reproduced_by': developer.id,
+            'cannot_reproduced_at': defect.cannot_reproduced_at,
         }
     })
 

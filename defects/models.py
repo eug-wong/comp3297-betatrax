@@ -127,6 +127,39 @@ class DefectReport(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     backlog_item_link = models.CharField(max_length=100, blank=True, null=True)
 
+    # PO rejection fields
+    rejected_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejected_defects'
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, null=True)
+
+    # PO reopen fields
+    reopened_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reopened_defects'
+    )
+    reopened_at = models.DateTimeField(null=True, blank=True)
+    reopen_reason = models.TextField(blank=True, null=True)
+
+    # Developer cannot reproduce fields
+    cannot_reproduce_reason = models.TextField(blank=True, null=True)
+    cannot_reproduced_by = models.ForeignKey(
+        Developer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cannot_reproduced_defects'
+    )
+    cannot_reproduced_at = models.DateTimeField(null=True, blank=True)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)  # time_received
     updated_at = models.DateTimeField(auto_now=True)

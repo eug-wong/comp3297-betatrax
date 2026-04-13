@@ -24,10 +24,9 @@ python manage.py runserver
 - [x] Developer mark defect as Cannot Reproduce
 - [x] PO close defect as Resolved
 - [x] Email notifications (console backend)
+- [x] PO reject defect
+- [x] PO mark defect as Duplicate
+- [x] Reopen defect flow
 
 ## Not Implemented
-
-- [ ] PO reject defect
-- [ ] PO mark defect as Duplicate
-- [ ] Reopen defect flow
 - [ ] Comments on defects

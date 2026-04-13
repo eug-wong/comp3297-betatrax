@@ -19,6 +19,9 @@ urlpatterns = [
     path('api/po/defects/new/', po_views.PO_NewDefectList.as_view()),
     path('api/po/defects/<int:defect_id>/', po_views.PO_DefectDetail.as_view()),
     path('api/po/defects/<int:defect_id>/approve/', po_views.PO_ApproveDefect.as_view()),
+    path('api/po/defects/<int:defect_id>/reject/', po_views.PO_RejectDefect.as_view()),
+    path('api/po/defects/<int:defect_id>/mark-duplicate/', po_views.PO_MarkDefectDuplicate.as_view()),
+    path('api/po/defects/<int:defect_id>/reopen/', po_views.PO_ReopenDefect.as_view()),
     path('api/po/defects/list/', po_views.PO_DefectList.as_view()),
 
 ]
