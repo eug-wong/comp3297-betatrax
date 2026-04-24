@@ -1,7 +1,7 @@
 """URL configuration for defects app."""
 from django.urls import path
-
 from . import views
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 urlpatterns = [
     path('api/defects/', views.defect_list, name='defect_list'),
@@ -25,4 +25,9 @@ urlpatterns = [
 
     # developer effectiveness metric
     path('api/employees/<int:employee_id>/effectiveness/', views.developer_effectiveness, name='developer_effectiveness'),
+
+    #schema endpoints
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

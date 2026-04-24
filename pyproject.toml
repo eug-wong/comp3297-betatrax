@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "Eugene Wong", email = "ewong298@gmail.com"},
 ]
-dependencies = ["Django=6.0.3"]
+dependencies = ["Django>=6.0.3", "drf-spectacular>=0.29.0"]
 requires-python = ">=3.13"
 readme = "README.md"
 license = {text = "MIT"}

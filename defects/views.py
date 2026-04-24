@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
 
 from .metrics import classify_effectiveness
 from .models import DefectReport, Employee, Comment, Product
@@ -85,6 +86,8 @@ def send_status_change_notifications(defect, old_status, new_status):
             pass
 
 
+@extend_schema(methods=['GET'], operation_id='defects_list_get', responses=None)
+@extend_schema(methods=['POST'], operation_id='defects_list_post', request=DefectReportSerializer, responses=DefectReportSerializer)
 @api_view(['GET', 'POST'])
 def defect_list(request):
     if request.method == 'POST':
@@ -138,6 +141,7 @@ def defect_list(request):
     ])
 
 
+@extend_schema(operation_id='defects_detail', responses=None)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def defect_detail(request, defect_id):
@@ -188,6 +192,7 @@ def _defect_detail_response(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def take_responsibility(request, defect_id):
@@ -220,6 +225,7 @@ def take_responsibility(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_as_fixed(request, defect_id):
@@ -257,6 +263,7 @@ def mark_as_fixed(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_as_cannot_reproduce(request, defect_id):
@@ -320,6 +327,7 @@ def mark_as_cannot_reproduce(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def approve_defect(request, defect_id):
@@ -357,6 +365,7 @@ def approve_defect(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reject_defect(request, defect_id):
@@ -390,6 +399,7 @@ def reject_defect(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_duplicate(request, defect_id):
@@ -437,6 +447,7 @@ def mark_duplicate(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reopen_defect(request, defect_id):
@@ -478,6 +489,7 @@ def reopen_defect(request, defect_id):
     })
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def resolve_defect(request, defect_id):
@@ -503,6 +515,8 @@ def resolve_defect(request, defect_id):
     })
 
 
+@extend_schema(methods=['GET'], responses=CommentSerializer(many=True))
+@extend_schema(methods=['POST'], request=CommentSerializer, responses=CommentSerializer)
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def defect_comments(request, defect_id):
@@ -524,6 +538,7 @@ def defect_comments(request, defect_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(request=ProductSerializer, responses=ProductSerializer)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_product(request):
@@ -537,6 +552,7 @@ def create_product(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(request=None, responses=None)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -545,6 +561,7 @@ def logout_view(request):
     return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses=None)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def developer_effectiveness(request, employee_id):

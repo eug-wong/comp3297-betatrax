@@ -1,0 +1,513 @@
+openapi: 3.0.3
+info:
+  title: Betatrax API
+  version: 1.0.0
+  description: API documentation for the Betatrax defect tracking system.
+paths:
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/:
+    get:
+      operationId: defects_list_get
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: defects_list_post
+      tags:
+      - defects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefectReport'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DefectReport'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DefectReport'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefectReport'
+          description: ''
+  /api/defects/{defect_id}/:
+    get:
+      operationId: defects_detail
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/approve/:
+    post:
+      operationId: defects_approve_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/assign/:
+    post:
+      operationId: defects_assign_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/comments/:
+    get:
+      operationId: defects_comments_list
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+          description: ''
+    post:
+      operationId: defects_comments_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Comment'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+  /api/defects/{defect_id}/mark-cannot-reproduce/:
+    post:
+      operationId: defects_mark_cannot_reproduce_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/mark-duplicate/:
+    post:
+      operationId: defects_mark_duplicate_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/mark-fixed/:
+    post:
+      operationId: defects_mark_fixed_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/reject/:
+    post:
+      operationId: defects_reject_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/reopen/:
+    post:
+      operationId: defects_reopen_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/defects/{defect_id}/resolve/:
+    post:
+      operationId: defects_resolve_create
+      parameters:
+      - in: path
+        name: defect_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - defects
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/employees/{employee_id}/effectiveness/:
+    get:
+      operationId: employees_effectiveness_retrieve
+      parameters:
+      - in: path
+        name: employee_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - employees
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/products/:
+    post:
+      operationId: products_create
+      tags:
+      - products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Product'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Product'
+        required: true
+      security:
+      - tokenAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+components:
+  schemas:
+    AuthToken:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - password
+      - token
+      - username
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        text:
+          type: string
+        date:
+          type: string
+          format: date-time
+          readOnly: true
+        defect_report:
+          type: integer
+          readOnly: true
+        author:
+          type: integer
+          readOnly: true
+      required:
+      - author
+      - date
+      - defect_report
+      - id
+      - text
+    DefectReport:
+      type: object
+      description: Serializer for creating and viewing defect reports.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        steps_to_reproduce:
+          type: string
+        product:
+          type: integer
+        tester_id:
+          type: string
+          maxLength: 100
+        tester_email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        severity:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SeverityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        priority:
+          readOnly: true
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        assigned_developer:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assigned_developer
+      - created_at
+      - description
+      - id
+      - priority
+      - product
+      - severity
+      - status
+      - steps_to_reproduce
+      - tester_id
+      - title
+      - updated_at
+    NullEnum:
+      enum:
+      - null
+    PriorityEnum:
+      enum:
+      - Critical
+      - High
+      - Medium
+      - Low
+      type: string
+      description: |-
+        * `Critical` - Critical
+        * `High` - High
+        * `Medium` - Medium
+        * `Low` - Low
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+      required:
+      - id
+      - name
+    SeverityEnum:
+      enum:
+      - Critical
+      - Major
+      - Minor
+      - Low
+      type: string
+      description: |-
+        * `Critical` - Critical
+        * `Major` - Major
+        * `Minor` - Minor
+        * `Low` - Low
+    StatusEnum:
+      enum:
+      - New
+      - Open
+      - Assigned
+      - Fixed
+      - Resolved
+      - Rejected
+      - Duplicate
+      - Cannot Reproduce
+      - Reopened
+      type: string
+      description: |-
+        * `New` - New
+        * `Open` - Open
+        * `Assigned` - Assigned
+        * `Fixed` - Fixed
+        * `Resolved` - Resolved
+        * `Rejected` - Rejected
+        * `Duplicate` - Duplicate
+        * `Cannot Reproduce` - Cannot Reproduce
+        * `Reopened` - Reopened
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
