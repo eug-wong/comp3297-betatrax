@@ -9,5 +9,7 @@ demo_setup.py
 defects/tests.py
 DEMO_GUIDE.md
 db.sqlite3
+.coverage
+htmlcov/
 *.md
 !README.md
