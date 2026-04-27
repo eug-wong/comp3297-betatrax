@@ -10,8 +10,8 @@ BetaTrax supports the beta testing lifecycle for software products. This release
 3. Hosts File Configuration: Map local subdomains to enable tenant routing:
 ```text
 127.0.0.1 localhost
-127.0.0.1 compa.localhost
-127.0.0.1 compb.localhost
+127.0.0.1 se1.localhost
+127.0.0.1 se2.localhost
 ```
 
 ## Setup
@@ -70,9 +70,9 @@ python manage.py createsuperuser
 
 Tenant Admin: 
 ```bash
-python manage.py tenant_command createsuperuser --schema=comp_a
+python manage.py tenant_command createsuperuser --schema=se1
 ```
-(Access via compa.localhost:8000/admin/)
+(Access via se1.localhost:8000/admin/)
 
 6. Launch Server
 ```bash
