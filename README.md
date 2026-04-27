@@ -1,19 +1,18 @@
-# BetaTrax
-Defect tracking system for beta testing - Now upgraded with PostgreSQL and Multi-tenancy support.
+# BetaTrax (Release 2)
+Defect tracking system for beta testing - Upgraded to a **Multi-tenant SaaS architecture**.
 
-# Project Overview
-BetaTrax is a specialized platform for managing software defects across multiple organizations. By utilizing a schema-based multi-tenancy approach (via django-tenants), it ensures complete data isolation between different tenants (e.g., different universities) while running on a single server instance.
+## Project Overview
+BetaTrax supports the beta testing lifecycle for software products. This release introduces a single database, separate schema multi-tenancy approach using PostgreSQL, allowing different organizations to use the service as a SaaS product with total data isolation.
 
-# Prerequisites
-1. Python 3.14+
-
-2. PostgreSQL: Ensure PostgreSQL is running and a database (e.g., betatrax_db) is created.
-
-3. Hosts File Configuration: To enable local tenant routing, add the following to your system's hosts file (/etc/hosts on macOS/Linux):
-
+## Prerequisites
+1. Python 3.14+ 
+2. PostgreSQL: Required for schema-based multi-tenancy.
+3. Hosts File Configuration: Map local subdomains to enable tenant routing:
+```text
 127.0.0.1 localhost
-127.0.0.1 hku.localhost
-127.0.0.1 polyu.localhost
+127.0.0.1 compa.localhost
+127.0.0.1 compb.localhost
+```
 
 ## Setup
 
@@ -46,20 +45,21 @@ tenant = Client(schema_name='public', name='Public Interface')
 tenant.save()
 Domain.objects.create(domain='localhost', tenant=tenant, is_primary=True)
 ```
-4. Create Tenants (e.g., HKU and PolyU)
-In the same shell, set up your isolated tenant environments:
+# 4. Create Tenants (Example for different development companies)
+# In the same shell, set up your isolated tenant environments:
 
 ```python
-# Create HKU tenant
-hku = Client(schema_name='hku', name='HKU University')
-hku.save()
-Domain.objects.create(domain='hku.localhost', tenant=hku, is_primary=True)
+# Create Company A tenant
+company_a = Client(schema_name='comp_a', name='Software Solutions Ltd')
+company_a.save()
+Domain.objects.create(domain='compa.localhost', tenant=company_a, is_primary=True)
 
-# Create PolyU tenant
-polyu = Client(schema_name='polyu', name='PolyU Tenant')
-polyu.save()
-Domain.objects.create(domain='polyu.localhost', tenant=polyu, is_primary=True)
+# Create Company B tenant
+company_b = Client(schema_name='comp_b', name='InnovateSoft')
+company_b.save()
+Domain.objects.create(domain='compb.localhost', tenant=company_b, is_primary=True)
 ```
+
 5. Create Administrative Users
 
 Global Admin: 
@@ -70,9 +70,9 @@ python manage.py createsuperuser
 
 Tenant Admin: 
 ```bash
-python manage.py tenant_command createsuperuser --schema=hku 
+python manage.py tenant_command createsuperuser --schema=comp_a
 ```
-(Access via hku.localhost:8000/admin/)
+(Access via compa.localhost:8000/admin/)
 
 6. Launch Server
 ```bash
