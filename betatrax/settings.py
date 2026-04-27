@@ -6,14 +6,11 @@ SECRET_KEY = 'django-insecure-n)ti$svy6%0mlw&i#^o_@(wn52$bil+sct00brj^&4yu_ov#8n
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', '.localhost'] # 允許子網域
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', '.localhost'] 
 
-# --- Multi-tenancy 配置 ---
-
-# Shared Apps: 存放租戶資訊（Client/Domain）和 Django 核心功能
 SHARED_APPS = (
-    'django_tenants',  # 必須放在第一位
-    'customers',       # 你需要建立這個新 app 來管理租戶
+    'django_tenants',  
+    'customers',       
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -23,23 +20,22 @@ SHARED_APPS = (
     'drf_spectacular',
 )
 
-# Tenant Apps: 每個租戶專屬的業務資料
 TENANT_APPS = (
-    'django.contrib.auth', # 如果每個租戶有獨立用戶
+    'django.contrib.auth', 
     'rest_framework',
     'rest_framework.authtoken',
-    'defects.apps.DefectsConfig', # 你的核心業務放在這裡
+    'defects.apps.DefectsConfig',
 )
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
-TENANT_MODEL = 'customers.Client' # 稍後建立
-TENANT_DOMAIN_MODEL = 'customers.Domain' # 稍後建立
+TENANT_MODEL = 'customers.Client' 
+TENANT_DOMAIN_MODEL = 'customers.Domain' 
 
 # -----------------------
 
 MIDDLEWARE = [
-    'django_tenants.middleware.main.TenantMainMiddleware', # 必須放在最上方
+    'django_tenants.middleware.main.TenantMainMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -83,7 +79,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'betatrax.wsgi.application'
 
-# 資料庫改用 django_tenants 的後端
 DATABASES = {
     'default': {
         'ENGINE': 'django_tenants.postgresql_backend', 
