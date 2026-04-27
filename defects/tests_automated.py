@@ -4,6 +4,7 @@ Automated conformance tests for BetaTrax API.
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django_tenants.test.cases import TenantTestCase
 from rest_framework.test import APIClient
 
 from .metrics import classify_effectiveness
@@ -33,11 +34,11 @@ def make_defect(product, status='New', **kwargs):
 
 
 # happy path
-class AuthTests(TestCase):
+class AuthTests(TenantTestCase):
     """POST /api/auth/login/ and POST /api/auth/logout/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.user = make_user('authuser')
 
     def test_login_returns_token(self):
@@ -51,11 +52,11 @@ class AuthTests(TestCase):
         self.assertEqual(r.status_code, 200)
 
 
-class DefectListTests(TestCase):
+class DefectListTests(TenantTestCase):
     """GET and POST /api/defects/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -77,11 +78,11 @@ class DefectListTests(TestCase):
         self.assertEqual(r.status_code, 200)
 
 
-class DefectDetailTests(TestCase):
+class DefectDetailTests(TenantTestCase):
     """GET /api/defects/<id>/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -93,11 +94,11 @@ class DefectDetailTests(TestCase):
         self.assertEqual(r.status_code, 200)
 
 
-class ApproveDefectTests(TestCase):
+class ApproveDefectTests(TenantTestCase):
     """POST /api/defects/<id>/approve/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -114,11 +115,11 @@ class ApproveDefectTests(TestCase):
         self.assertEqual(r.data['new_status'], 'Open')
 
 
-class RejectDefectTests(TestCase):
+class RejectDefectTests(TenantTestCase):
     """POST /api/defects/<id>/reject/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -133,11 +134,11 @@ class RejectDefectTests(TestCase):
         self.assertEqual(r.data['new_status'], 'Rejected')
 
 
-class MarkDuplicateTests(TestCase):
+class MarkDuplicateTests(TenantTestCase):
     """POST /api/defects/<id>/mark-duplicate/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -153,11 +154,11 @@ class MarkDuplicateTests(TestCase):
         self.assertEqual(r.data['new_status'], 'Duplicate')
 
 
-class TakeResponsibilityTests(TestCase):
+class TakeResponsibilityTests(TenantTestCase):
     """POST /api/defects/<id>/assign/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.dev_user = make_user('dev')
         make_employee(self.dev_user, self.product, 'Developer')
@@ -170,11 +171,11 @@ class TakeResponsibilityTests(TestCase):
         self.assertEqual(r.data['defect']['status'], 'Assigned')
 
 
-class MarkFixedTests(TestCase):
+class MarkFixedTests(TenantTestCase):
     """POST /api/defects/<id>/mark-fixed/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.dev_user = make_user('dev')
         self.dev = make_employee(self.dev_user, self.product, 'Developer')
@@ -189,11 +190,11 @@ class MarkFixedTests(TestCase):
         self.assertEqual(r.data['defect']['status'], 'Fixed')
 
 
-class MarkCannotReproduceTests(TestCase):
+class MarkCannotReproduceTests(TenantTestCase):
     """POST /api/defects/<id>/mark-cannot-reproduce/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.dev_user = make_user('dev')
         self.dev = make_employee(self.dev_user, self.product, 'Developer')
@@ -210,11 +211,11 @@ class MarkCannotReproduceTests(TestCase):
         self.assertEqual(r.data['defect']['status'], 'Cannot Reproduce')
 
 
-class ReopenDefectTests(TestCase):
+class ReopenDefectTests(TenantTestCase):
     """POST /api/defects/<id>/reopen/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -229,11 +230,11 @@ class ReopenDefectTests(TestCase):
         self.assertEqual(r.data['new_status'], 'Reopened')
 
 
-class ResolveDefectTests(TestCase):
+class ResolveDefectTests(TenantTestCase):
     """POST /api/defects/<id>/resolve/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -246,11 +247,11 @@ class ResolveDefectTests(TestCase):
         self.assertEqual(r.data['new_status'], 'Resolved')
 
 
-class CommentsTests(TestCase):
+class CommentsTests(TenantTestCase):
     """GET and POST /api/defects/<id>/comments/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -267,11 +268,11 @@ class CommentsTests(TestCase):
         self.assertEqual(r.status_code, 200)
 
 
-class CreateProductTests(TestCase):
+class CreateProductTests(TenantTestCase):
     """POST /api/products/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         make_employee(self.po_user, self.product, 'ProductOwner')
@@ -283,11 +284,11 @@ class CreateProductTests(TestCase):
         self.assertEqual(r.data['name'], 'NewProduct')
 
 
-class DeveloperEffectivenessTests(TestCase):
+class DeveloperEffectivenessTests(TenantTestCase):
     """GET /api/employees/<id>/effectiveness/"""
 
     def setUp(self):
-        self.client = APIClient()
+        self.client = APIClient(SERVER_NAME=self.tenant.get_primary_domain().domain)
         self.product = make_product()
         self.po_user = make_user('po')
         self.dev_user = make_user('dev')
