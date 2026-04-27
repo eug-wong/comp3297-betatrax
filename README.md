@@ -5,7 +5,7 @@ Defect tracking system for beta testing - Upgraded to a **Multi-tenant SaaS arch
 BetaTrax supports the beta testing lifecycle for software products. This release introduces a single database, separate schema multi-tenancy approach using PostgreSQL, allowing different organizations to use the service as a SaaS product with total data isolation.
 
 ## Prerequisites
-1. Python 3.14+ 
+1. Python 3.13+ 
 2. PostgreSQL: Required for schema-based multi-tenancy.
 3. Hosts File Configuration: Map local subdomains to enable tenant routing:
 ```text
@@ -49,15 +49,15 @@ Domain.objects.create(domain='localhost', tenant=tenant, is_primary=True)
 # In the same shell, set up your isolated tenant environments:
 
 ```python
-# Create Company A tenant
-company_a = Client(schema_name='comp_a', name='Software Solutions Ltd')
-company_a.save()
-Domain.objects.create(domain='compa.localhost', tenant=company_a, is_primary=True)
+# Create SE Tenant 1
+t1 = Client(schema_name='se1', name='SE Tenant 1')
+t1.save(verbosity=0)
+Domain.objects.create(domain='se1.localhost', tenant=t1, is_primary=True)
 
-# Create Company B tenant
-company_b = Client(schema_name='comp_b', name='InnovateSoft')
-company_b.save()
-Domain.objects.create(domain='compb.localhost', tenant=company_b, is_primary=True)
+# Create SE Tenant 2
+t2 = Client(schema_name='se2', name='SE Tenant 2')
+t2.save(verbosity=0)
+Domain.objects.create(domain='se2.localhost', tenant=t2, is_primary=True)
 ```
 
 5. Create Administrative Users
@@ -79,6 +79,19 @@ python manage.py tenant_command createsuperuser --schema=comp_a
 python manage.py runserver
 ```
 
+## Testing
+
+Run automated conformance tests:
+```bash
+python manage.py test defects.tests_automated -v 2
+```
+
+Run classification tests with branch coverage:
+```bash
+coverage run --branch --source=defects.metrics manage.py test defects.tests_automated
+coverage report -m
+```
+
 ## Working Features
 
 - [x] Submit defect report with optional email
@@ -96,3 +109,4 @@ python manage.py runserver
 - [x] Comments on defects
 - [x] Product Registration by Product Owner
 - [x] User Authentication
+- [x] Developer effectiveness metric and classification
