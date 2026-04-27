@@ -1,356 +1,807 @@
 openapi: 3.0.3
 info:
-  title: Betatrax API
+  title: BetaTrax API
   version: 1.0.0
-  description: API documentation for the Betatrax defect tracking system.
+  description: |
+    REST API for the BetaTrax defect tracking system. BetaTrax manages the lifecycle
+    of defect reports submitted by beta testers for software products.
+
+    **Authentication:** All endpoints except POST /api/defects/ (defect submission)
+    require a token in the Authorization header:
+    ```
+    Authorization: Token <your-token>
+    ```
+    Obtain a token via POST /api/auth/login/.
+
+    **Roles:** Employees are either a `Developer` or `ProductOwner` for exactly one product.
+    Each endpoint documents which role is required.
+
+    **Defect lifecycle:**
+    New → Open / Rejected / Duplicate → Assigned / Cannot Reproduce → Fixed → Reopened / Resolved
+
+tags:
+  - name: auth
+    description: Login and logout
+  - name: defects
+    description: Defect report submission and lifecycle management
+  - name: comments
+    description: Comments on defect reports
+  - name: products
+    description: Product registration
+  - name: employees
+    description: Developer effectiveness metrics
+
 paths:
+
   /api/auth/login/:
     post:
-      operationId: auth_login_create
-      tags:
-      - auth
+      operationId: auth_login
+      summary: Obtain auth token
+      description: Returns a token for the given credentials. Include this token in all subsequent requests.
+      tags: [auth]
       requestBody:
+        required: true
         content:
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AuthToken'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AuthToken'
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthToken'
-        required: true
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: po1
+              password: pass123
       responses:
         '200':
+          description: Token returned
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthToken'
-          description: ''
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                token: 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4
+        '400':
+          description: Invalid credentials
+
   /api/auth/logout/:
     post:
-      operationId: auth_logout_create
-      tags:
-      - auth
+      operationId: auth_logout
+      summary: Invalidate auth token
+      description: Deletes the current user's auth token. Requires authentication.
+      tags: [auth]
       security:
-      - tokenAuth: []
-      - cookieAuth: []
+        - tokenAuth: []
       responses:
         '200':
-          description: No response body
+          description: Successfully logged out
+          content:
+            application/json:
+              example:
+                message: Successfully logged out.
+        '401':
+          description: Not authenticated
+
   /api/defects/:
     get:
-      operationId: defects_list_get
-      tags:
-      - defects
+      operationId: defects_list
+      summary: List defects for your product
+      description: |
+        Returns all defect reports for the authenticated employee's product.
+        - **Product Owner** receives: report_id, title, tester_id, submitted_at, status
+        - **Developer** receives: id, title, description, severity, priority, created_at
+
+        Optional query parameters for filtering: `status`, `severity`, `priority`, `assigned_to`, `tester_id`
+      tags: [defects]
       security:
-      - tokenAuth: []
-      - cookieAuth: []
-      - {}
+        - tokenAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [New, Open, Assigned, Fixed, Resolved, Rejected, Duplicate, Cannot Reproduce, Reopened]
+        - in: query
+          name: severity
+          schema:
+            type: string
+            enum: [Critical, Major, Minor, Low]
+        - in: query
+          name: priority
+          schema:
+            type: string
+            enum: [Critical, High, Medium, Low]
+        - in: query
+          name: assigned_to
+          schema:
+            type: integer
+          description: Employee ID of the assigned developer
+        - in: query
+          name: tester_id
+          schema:
+            type: string
       responses:
         '200':
-          description: No response body
+          description: List of defect reports
+          content:
+            application/json:
+              example:
+                - report_id: 1
+                  title: Login button broken
+                  tester_id: tester42
+                  submitted_at: '2026-04-01T10:00:00Z'
+                  status: New
+        '401':
+          description: Not authenticated
+        '403':
+          description: User is not a registered employee
+
     post:
-      operationId: defects_list_post
-      tags:
-      - defects
+      operationId: defects_submit
+      summary: Submit a defect report
+      description: |
+        Submitted by an external beta tester (no authentication required).
+        The defect is created with status `New`.
+      tags: [defects]
+      security:
+        - {}
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DefectReport'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/DefectReport'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/DefectReport'
-        required: true
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      - {}
+              $ref: '#/components/schemas/DefectReportCreate'
+            example:
+              title: Login button broken
+              description: Clicking the login button does nothing on Safari
+              steps_to_reproduce: "1. Open Safari\n2. Go to login page\n3. Click Login"
+              product: 1
+              tester_id: tester42
+              tester_email: tester@example.com
       responses:
-        '200':
+        '201':
+          description: Defect report created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DefectReport'
-          description: ''
+        '400':
+          description: Validation error — missing required fields
+
   /api/defects/{defect_id}/:
     get:
       operationId: defects_detail
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
+      summary: Get defect report detail
+      description: |
+        Returns full detail for a single defect report belonging to the authenticated employee's product.
+        Response shape differs slightly between Product Owner and Developer.
+      tags: [defects]
       security:
-      - tokenAuth: []
-      - cookieAuth: []
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
-          description: No response body
+          description: Defect detail
+          content:
+            application/json:
+              example:
+                report_id: 1
+                product: TestApp
+                title: Login button broken
+                description: Clicking the login button does nothing on Safari
+                reproduction_steps: "1. Open Safari\n2. Go to login page\n3. Click Login"
+                tester_id: tester42
+                tester_email: tester@example.com
+                status: Open
+                rejection_reason: null
+                reopen_reason: null
+                cannot_reproduce_reason: null
+                submitted_at: '2026-04-01T10:00:00Z'
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not an employee
+        '404':
+          description: Defect not found or belongs to a different product
+
   /api/defects/{defect_id}/approve/:
     post:
-      operationId: defects_approve_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
+      operationId: defects_approve
+      summary: Approve a defect report
+      description: |
+        **Product Owner only.** Approves a `New` defect report, setting severity, priority,
+        and a backlog item link. Status changes to `Open`.
+      tags: [defects]
       security:
-      - tokenAuth: []
-      - cookieAuth: []
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRequest'
+            example:
+              severity: Major
+              priority: High
+              backlog_item_id: ITEM-101
       responses:
         '200':
-          description: No response body
+          description: Defect approved and status set to Open
+          content:
+            application/json:
+              example:
+                success: true
+                message: Report Approved and Marked as Open
+                report_id: 1
+                new_status: Open
+        '400':
+          description: Defect not found, not in New status, or missing required fields
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Product Owner
+
+  /api/defects/{defect_id}/reject/:
+    post:
+      operationId: defects_reject
+      summary: Reject a defect report
+      description: |
+        **Product Owner only.** Rejects a `New` defect report that is not considered a real defect.
+        Status changes to `Rejected`.
+      tags: [defects]
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectionRequest'
+            example:
+              rejection_reason: Works as intended — this is expected behaviour
+      responses:
+        '200':
+          description: Defect rejected
+          content:
+            application/json:
+              example:
+                success: true
+                message: Report Rejected as Invalid
+                report_id: 1
+                new_status: Rejected
+                rejection_reason: Works as intended — this is expected behaviour
+        '400':
+          description: Defect not found, not in New status, or missing rejection_reason
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Product Owner
+
+  /api/defects/{defect_id}/mark-duplicate/:
+    post:
+      operationId: defects_mark_duplicate
+      summary: Mark a defect as duplicate
+      description: |
+        **Product Owner only.** Marks a `New` defect as a duplicate of an already-open defect.
+        Status changes to `Duplicate`.
+      tags: [defects]
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DuplicateRequest'
+            example:
+              duplicate_of_report_id: 5
+      responses:
+        '200':
+          description: Defect marked as duplicate
+          content:
+            application/json:
+              example:
+                success: true
+                message: Report Marked as Duplicate
+                report_id: 2
+                new_status: Duplicate
+                duplicate_of_report_id: 5
+        '400':
+          description: Missing field, target not found, target is still New, or self-reference
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Product Owner
+
   /api/defects/{defect_id}/assign/:
     post:
-      operationId: defects_assign_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
+      operationId: defects_assign
+      summary: Take responsibility for a defect
+      description: |
+        **Developer only.** Developer self-assigns an `Open` or `Reopened` defect.
+        Status changes to `Assigned`.
+      tags: [defects]
       security:
-      - tokenAuth: []
-      - cookieAuth: []
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
-          description: No response body
+          description: Defect assigned to developer
+          content:
+            application/json:
+              example:
+                success: true
+                message: You have taken responsibility for defect 1
+                defect:
+                  id: 1
+                  title: Login button broken
+                  status: Assigned
+                  assigned_to: dev1
+        '400':
+          description: Defect status is not Open or Reopened
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Developer, or defect belongs to a different product
+
+  /api/defects/{defect_id}/mark-fixed/:
+    post:
+      operationId: defects_mark_fixed
+      summary: Mark a defect as fixed
+      description: |
+        **Developer only.** Marks an `Assigned` defect as fixed. Only the developer
+        currently assigned to the defect can call this. Status changes to `Fixed`.
+        The developer's `defects_fixed_count` is incremented.
+      tags: [defects]
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Defect marked as fixed
+          content:
+            application/json:
+              example:
+                success: true
+                message: Defect 1 marked as Fixed
+                defect:
+                  id: 1
+                  title: Login button broken
+                  status: Fixed
+        '400':
+          description: Defect status is not Assigned
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Developer, not assigned to this defect, or wrong product
+
+  /api/defects/{defect_id}/mark-cannot-reproduce/:
+    post:
+      operationId: defects_mark_cannot_reproduce
+      summary: Mark a defect as cannot reproduce
+      description: |
+        **Developer only.** Marks an `Assigned` defect as cannot reproduce. Only the
+        assigned developer can call this. Requires a reason. Status changes to `Cannot Reproduce`.
+      tags: [defects]
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CannotReproduceRequest'
+            example:
+              cannot_reproduce_reason: Cannot replicate on any device or browser combination
+      responses:
+        '200':
+          description: Defect marked as cannot reproduce
+          content:
+            application/json:
+              example:
+                success: true
+                message: Defect 1 marked as Cannot Reproduce
+                defect:
+                  id: 1
+                  title: Login button broken
+                  status: Cannot Reproduce
+                  cannot_reproduce_reason: Cannot replicate on any device or browser combination
+        '400':
+          description: Missing cannot_reproduce_reason or defect not in Assigned status
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Developer or not assigned to this defect
+
+  /api/defects/{defect_id}/reopen/:
+    post:
+      operationId: defects_reopen
+      summary: Reopen a fixed defect
+      description: |
+        **Product Owner only.** Reopens a `Fixed` defect that was not successfully corrected.
+        Status changes to `Reopened`. The previously assigned developer's `defects_reopened_count`
+        is incremented. The assigned developer is cleared.
+      tags: [defects]
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReopenRequest'
+            example:
+              reopen_reason: Still broken on mobile Safari — fix did not address root cause
+      responses:
+        '200':
+          description: Defect reopened
+          content:
+            application/json:
+              example:
+                success: true
+                message: Report Marked as Reopened
+                report_id: 1
+                new_status: Reopened
+                reopen_reason: Still broken on mobile Safari — fix did not address root cause
+                reopened_by: po1
+        '400':
+          description: Defect not found, not in Fixed status, or missing reopen_reason
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Product Owner
+
+  /api/defects/{defect_id}/resolve/:
+    post:
+      operationId: defects_resolve
+      summary: Resolve a fixed defect
+      description: |
+        **Product Owner only.** Closes a `Fixed` defect as successfully resolved.
+        Status changes to `Resolved`.
+      tags: [defects]
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Defect resolved
+          content:
+            application/json:
+              example:
+                success: true
+                message: Defect 1 marked as Resolved.
+                report_id: 1
+                new_status: Resolved
+        '400':
+          description: Defect not found or not in Fixed status
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Product Owner
+
   /api/defects/{defect_id}/comments/:
     get:
       operationId: defects_comments_list
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
+      summary: List comments on a defect
+      description: Returns all comments on the given defect, ordered by date. Requires authentication.
+      tags: [comments]
       security:
-      - tokenAuth: []
-      - cookieAuth: []
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
+          description: List of comments
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Comment'
-          description: ''
+              example:
+                - id: 1
+                  text: Investigating this issue now
+                  date: '2026-04-01T11:00:00Z'
+                  defect_report: 1
+                  author: 2
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not an employee
+        '404':
+          description: Defect not found or belongs to a different product
+
     post:
       operationId: defects_comments_create
+      summary: Add a comment to a defect
+      description: |
+        Adds a comment to the given defect. Available to both Developers and Product Owners.
+        The author is set automatically from the authenticated user.
+      tags: [comments]
+      security:
+        - tokenAuth: []
       parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
+        - in: path
+          name: defect_id
+          required: true
+          schema:
+            type: integer
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Comment'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Comment'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Comment'
-        required: true
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
+              type: object
+              properties:
+                text:
+                  type: string
+              required: [text]
+            example:
+              text: Confirmed — reproducible on Safari 17.3
       responses:
-        '200':
+        '201':
+          description: Comment created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Comment'
-          description: ''
-  /api/defects/{defect_id}/mark-cannot-reproduce/:
-    post:
-      operationId: defects_mark_cannot_reproduce_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
-          description: No response body
-  /api/defects/{defect_id}/mark-duplicate/:
-    post:
-      operationId: defects_mark_duplicate_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
-          description: No response body
-  /api/defects/{defect_id}/mark-fixed/:
-    post:
-      operationId: defects_mark_fixed_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
-          description: No response body
-  /api/defects/{defect_id}/reject/:
-    post:
-      operationId: defects_reject_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
-          description: No response body
-  /api/defects/{defect_id}/reopen/:
-    post:
-      operationId: defects_reopen_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
-          description: No response body
-  /api/defects/{defect_id}/resolve/:
-    post:
-      operationId: defects_resolve_create
-      parameters:
-      - in: path
-        name: defect_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - defects
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
-          description: No response body
-  /api/employees/{employee_id}/effectiveness/:
-    get:
-      operationId: employees_effectiveness_retrieve
-      parameters:
-      - in: path
-        name: employee_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - employees
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
-      responses:
-        '200':
-          description: No response body
+              example:
+                id: 2
+                text: Confirmed — reproducible on Safari 17.3
+                date: '2026-04-01T11:05:00Z'
+                defect_report: 1
+                author: 3
+        '400':
+          description: Missing text field
+        '401':
+          description: Not authenticated
+        '404':
+          description: Defect not found or belongs to a different product
+
   /api/products/:
     post:
       operationId: products_create
-      tags:
-      - products
+      summary: Register a new product
+      description: |
+        **Product Owner only.** Registers a new product with BetaTrax.
+      tags: [products]
+      security:
+        - tokenAuth: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Product'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Product'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Product'
-        required: true
-      security:
-      - tokenAuth: []
-      - cookieAuth: []
+              $ref: '#/components/schemas/ProductCreate'
+            example:
+              name: MyApp v2
       responses:
-        '200':
+        '201':
+          description: Product created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
-          description: ''
+              example:
+                id: 2
+                name: MyApp v2
+        '400':
+          description: Missing name field
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not a Product Owner
+
+  /api/employees/{employee_id}/effectiveness/:
+    get:
+      operationId: employees_effectiveness
+      summary: Get developer effectiveness metric
+      description: |
+        Returns the effectiveness classification for a Developer in the authenticated employee's product.
+        Only Developers belonging to the same product can be queried.
+
+        **Classification rules (based on ratio of reopened / fixed):**
+        - Fixed count < 20: `Insufficient data`
+        - Ratio < 1/32 (0.03125): `Good`
+        - Ratio < 1/8 (0.125): `Fair`
+        - Otherwise: `Poor`
+      tags: [employees]
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: employee_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Developer effectiveness
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EffectivenessResponse'
+              example:
+                employee_id: 3
+                username: dev1
+                defects_fixed: 25
+                defects_reopened: 1
+                classification: Good
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not an employee
+        '404':
+          description: Developer not found, not a Developer role, or belongs to a different product
+
 components:
   schemas:
-    AuthToken:
+
+    LoginRequest:
       type: object
       properties:
         username:
           type: string
-          writeOnly: true
         password:
           type: string
-          writeOnly: true
+      required: [username, password]
+
+    TokenResponse:
+      type: object
+      properties:
         token:
           type: string
+      required: [token]
+
+    DefectReportCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        steps_to_reproduce:
+          type: string
+        product:
+          type: integer
+          description: Product ID
+        tester_id:
+          type: string
+          maxLength: 100
+        tester_email:
+          type: string
+          format: email
+          nullable: true
+      required: [title, description, steps_to_reproduce, product, tester_id]
+
+    DefectReport:
+      type: object
+      properties:
+        id:
+          type: integer
           readOnly: true
-      required:
-      - password
-      - token
-      - username
+        title:
+          type: string
+        description:
+          type: string
+        steps_to_reproduce:
+          type: string
+        product:
+          type: integer
+        tester_id:
+          type: string
+        tester_email:
+          type: string
+          format: email
+          nullable: true
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+          nullable: true
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+          nullable: true
+        assigned_developer:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ApproveRequest:
+      type: object
+      properties:
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        priority:
+          $ref: '#/components/schemas/PriorityEnum'
+        backlog_item_id:
+          type: string
+      required: [severity, priority, backlog_item_id]
+
+    RejectionRequest:
+      type: object
+      properties:
+        rejection_reason:
+          type: string
+      required: [rejection_reason]
+
+    DuplicateRequest:
+      type: object
+      properties:
+        duplicate_of_report_id:
+          type: integer
+      required: [duplicate_of_report_id]
+
+    CannotReproduceRequest:
+      type: object
+      properties:
+        cannot_reproduce_reason:
+          type: string
+      required: [cannot_reproduce_reason]
+
+    ReopenRequest:
+      type: object
+      properties:
+        reopen_reason:
+          type: string
+      required: [reopen_reason]
+
     Comment:
       type: object
       properties:
@@ -369,92 +820,16 @@ components:
         author:
           type: integer
           readOnly: true
-      required:
-      - author
-      - date
-      - defect_report
-      - id
-      - text
-    DefectReport:
+      required: [text]
+
+    ProductCreate:
       type: object
-      description: Serializer for creating and viewing defect reports.
       properties:
-        id:
-          type: integer
-          readOnly: true
-        title:
+        name:
           type: string
           maxLength: 255
-        description:
-          type: string
-        steps_to_reproduce:
-          type: string
-        product:
-          type: integer
-        tester_id:
-          type: string
-          maxLength: 100
-        tester_email:
-          type: string
-          format: email
-          nullable: true
-          maxLength: 254
-        status:
-          allOf:
-          - $ref: '#/components/schemas/StatusEnum'
-          readOnly: true
-        severity:
-          readOnly: true
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/SeverityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        priority:
-          readOnly: true
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/PriorityEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        assigned_developer:
-          type: integer
-          readOnly: true
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - assigned_developer
-      - created_at
-      - description
-      - id
-      - priority
-      - product
-      - severity
-      - status
-      - steps_to_reproduce
-      - tester_id
-      - title
-      - updated_at
-    NullEnum:
-      enum:
-      - null
-    PriorityEnum:
-      enum:
-      - Critical
-      - High
-      - Medium
-      - Low
-      type: string
-      description: |-
-        * `Critical` - Critical
-        * `High` - High
-        * `Medium` - Medium
-        * `Low` - Low
+      required: [name]
+
     Product:
       type: object
       properties:
@@ -463,51 +838,42 @@ components:
           readOnly: true
         name:
           type: string
-          maxLength: 255
-      required:
-      - id
-      - name
-    SeverityEnum:
-      enum:
-      - Critical
-      - Major
-      - Minor
-      - Low
-      type: string
-      description: |-
-        * `Critical` - Critical
-        * `Major` - Major
-        * `Minor` - Minor
-        * `Low` - Low
+      required: [id, name]
+
+    EffectivenessResponse:
+      type: object
+      properties:
+        employee_id:
+          type: integer
+        username:
+          type: string
+        defects_fixed:
+          type: integer
+        defects_reopened:
+          type: integer
+        classification:
+          type: string
+          enum: [Insufficient data, Good, Fair, Poor]
+
     StatusEnum:
-      enum:
-      - New
-      - Open
-      - Assigned
-      - Fixed
-      - Resolved
-      - Rejected
-      - Duplicate
-      - Cannot Reproduce
-      - Reopened
       type: string
-      description: |-
-        * `New` - New
-        * `Open` - Open
-        * `Assigned` - Assigned
-        * `Fixed` - Fixed
-        * `Resolved` - Resolved
-        * `Rejected` - Rejected
-        * `Duplicate` - Duplicate
-        * `Cannot Reproduce` - Cannot Reproduce
-        * `Reopened` - Reopened
+      enum: [New, Open, Assigned, Fixed, Resolved, Rejected, Duplicate, Cannot Reproduce, Reopened]
+
+    SeverityEnum:
+      type: string
+      enum: [Critical, Major, Minor, Low]
+
+    PriorityEnum:
+      type: string
+      enum: [Critical, High, Medium, Low]
+
   securitySchemes:
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: sessionid
     tokenAuth:
       type: apiKey
       in: header
       name: Authorization
-      description: Token-based authentication with required prefix "Token"
+      description: 'Token-based authentication. Format: `Token <your-token>`'
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

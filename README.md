@@ -96,8 +96,3 @@ python manage.py runserver
 - [x] Comments on defects
 - [x] Product Registration by Product Owner
 - [x] User Authentication
-
-## Not Implemented
-- [ ] Defect report validation
-- [ ] Version field on defect report
-- [ ] PO Assign Defect to Developer
