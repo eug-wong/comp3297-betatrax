@@ -21,7 +21,7 @@ BetaTrax supports the beta testing lifecycle for software products. This release
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install django djangorestframework django-tenants psycopg2-binary
+pip install django djangorestframework django-tenants psycopg2-binary drf-spectacular
 ```
 2. Database Migration
 Initialize the PostgreSQL schemas for both shared (public) and tenant-specific applications:
